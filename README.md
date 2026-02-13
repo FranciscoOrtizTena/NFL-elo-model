@@ -7,6 +7,7 @@ This repository contains an end-to-end NFL pregame modeling workflow:
 3. Train baseline models for spread, total points, and home win probability, then run a single-game prediction example.
 
 The main workflow lives in `analysis/` and writes outputs to `data/`.
+For reproducible runs without notebooks, use the scripts in `scripts/`.
 
 ## Folder Overview
 
@@ -16,6 +17,8 @@ The main workflow lives in `analysis/` and writes outputs to `data/`.
   - Parquet outputs used across notebooks:
     - `data/schedule_features_2016_2025.parquet`
     - `data/final_first_model.parquet`
+- `scripts/`
+  - CLI scripts to build features and train models without notebooks.
 
 ## Notebooks (analysis/)
 
@@ -33,6 +36,17 @@ High-level steps:
 - Walk forward game-by-game:
   - Save each team's **current** (pregame) priors into the game row.
   - If final scores exist, update priors using the game result and same-week stats.
+
+### CLI (scripts/)
+
+If you want to reproduce the full pipeline from scratch without notebooks:
+
+1. Build schedule features directly from `nflreadpy`:
+   - `python scripts/build_schedule_features.py --repo-root .`
+2. Build the final modeling table:
+   - `python scripts/build_model_table.py --repo-root .`
+3. Train/evaluate baselines:
+   - `python scripts/train_models.py --repo-root .`
 
 ### `analysis/eda_feature_diagnostics.ipynb`
 
