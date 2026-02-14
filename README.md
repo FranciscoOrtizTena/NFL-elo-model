@@ -47,6 +47,8 @@ If you want to reproduce the full pipeline from scratch without notebooks:
    - `python scripts/build_model_table.py --repo-root .`
 3. Train/evaluate baselines:
    - `python scripts/train_models.py --repo-root .`
+4. Predict single games (scheduled or imaginary):
+   - `python scripts/predict_single_game.py --repo-root . --home NE --away BAL`
 
 ### `analysis/eda_feature_diagnostics.ipynb`
 

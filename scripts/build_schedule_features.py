@@ -181,6 +181,10 @@ def main() -> None:
     turnover_rate_home_list: list[float] = []
     turnover_rate_away_list: list[float] = []
 
+    last_season: dict[str, int] = {}
+    last_week: dict[str, int] = {}
+    last_game_id: dict[str, str] = {}
+
     for _, row in df_ls_sub.iterrows():
         home = row.home_team
         away = row.away_team
@@ -268,6 +272,14 @@ def main() -> None:
         turnover_rate[home] = turnover_rate_home_new
         turnover_rate[away] = turnover_rate_away_new
 
+        # Track latest completed game for each team (post-game priors).
+        last_season[home] = int(row.season)
+        last_season[away] = int(row.season)
+        last_week[home] = int(row.week)
+        last_week[away] = int(row.week)
+        last_game_id[home] = str(row.game_id)
+        last_game_id[away] = str(row.game_id)
+
     df_ls_sub["r_away"] = r_away_list
     df_ls_sub["r_home"] = r_home_list
     df_ls_sub["off_epa_pp_away"] = off_epa_pp_away_list
@@ -279,6 +291,39 @@ def main() -> None:
 
     df_ls_sub.to_parquet(paths.schedule_features_path, index=False)
     print(f"Wrote: {paths.schedule_features_path} ({len(df_ls_sub)} rows)")
+
+    # Persist latest post-game priors for each team.
+    teams = sorted(elos.keys())
+    priors_rows = []
+    for team in teams:
+        priors_rows.append(
+            {
+                "team": team,
+                "season": last_season.get(team),
+                "week": last_week.get(team),
+                "as_of_game_id": last_game_id.get(team),
+                "r_elo": elos.get(team),
+                "off_epa_pp": off_epa_pp.get(team),
+                "def_epa_allowed_pp": def_epa_pp.get(team),
+                "turnover_rate": turnover_rate.get(team),
+            }
+        )
+    df_priors = pd.DataFrame(priors_rows)
+    priors_path = paths.data_dir / "team_priors_latest.parquet"
+    df_priors.to_parquet(priors_path, index=False)
+    print(f"Wrote: {priors_path} ({len(df_priors)} rows)")
+
+    # Persist latest home-stadium conditions for each team.
+    home_games = df_ls_sub.dropna(subset=["home_score"]).copy()
+    home_games = home_games.sort_values(["season", "week", "game_id"]).reset_index(drop=True)
+    latest_home = home_games.groupby("home_team", as_index=False).tail(1)
+    df_stadium = latest_home[["home_team", "season", "week", "game_id", "roof", "surface"]].copy()
+    df_stadium = df_stadium.rename(
+        columns={"home_team": "team", "game_id": "as_of_game_id"}
+    )
+    stadium_path = paths.data_dir / "team_stadium_latest.parquet"
+    df_stadium.to_parquet(stadium_path, index=False)
+    print(f"Wrote: {stadium_path} ({len(df_stadium)} rows)")
 
 
 if __name__ == "__main__":

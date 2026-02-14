@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 
 # Allow running without installing the package.
@@ -42,6 +41,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Predict spread/total/home-win for a single game row.")
     ap.add_argument("--repo-root", default=str(REPO_ROOT), help="Repository root (default: repo root)")
     ap.add_argument("--game-id", default=None, help="Filter by game_id (exact match).")
+    ap.add_argument("--home", default=None, help="Home team (e.g., NE).")
+    ap.add_argument("--away", default=None, help="Away team (e.g., BAL).")
     ap.add_argument("--tail", type=int, default=1, help="Use last N rows if no game-id provided.")
     args = ap.parse_args()
 
@@ -56,6 +57,59 @@ def main() -> None:
     df = pd.read_parquet(schedule_path)
     if args.game_id:
         df = df[df["game_id"] == args.game_id].copy()
+    elif args.home and args.away:
+        # Try to find scheduled row first.
+        df_sched = df[(df["home_team"] == args.home) & (df["away_team"] == args.away)].copy()
+        if len(df_sched) > 0:
+            df = df_sched.tail(1).copy()
+        else:
+            # Build a synthetic row from latest priors + latest home stadium.
+            priors_path = paths.data_dir / "team_priors_latest.parquet"
+            stadium_path = paths.data_dir / "team_stadium_latest.parquet"
+            priors = pd.read_parquet(priors_path)
+            stadium = pd.read_parquet(stadium_path)
+
+            home_prior = priors[priors["team"] == args.home]
+            away_prior = priors[priors["team"] == args.away]
+            if len(home_prior) == 0 or len(away_prior) == 0:
+                raise SystemExit("Team not found in team_priors_latest.parquet")
+
+            home_stadium = stadium[stadium["team"] == args.home]
+            roof = ""
+            surface = ""
+            if len(home_stadium) > 0:
+                roof = str(home_stadium.iloc[0]["roof"])
+                surface = str(home_stadium.iloc[0]["surface"])
+
+            df = pd.DataFrame(
+                [
+                    {
+                        "game_id": None,
+                        "season": int(home_prior.iloc[0]["season"]) if pd.notna(home_prior.iloc[0]["season"]) else None,
+                        "week": int(home_prior.iloc[0]["week"]) if pd.notna(home_prior.iloc[0]["week"]) else 1,
+                        "away_team": args.away,
+                        "home_team": args.home,
+                        "away_score": None,
+                        "home_score": None,
+                        "result": None,
+                        "total": None,
+                        "overtime": None,
+                        "away_rest": 0,
+                        "home_rest": 0,
+                        "div_game": 0,
+                        "roof": roof,
+                        "surface": surface,
+                        "r_away": float(away_prior.iloc[0]["r_elo"]),
+                        "r_home": float(home_prior.iloc[0]["r_elo"]),
+                        "off_epa_pp_away": float(away_prior.iloc[0]["off_epa_pp"]),
+                        "off_epa_pp_home": float(home_prior.iloc[0]["off_epa_pp"]),
+                        "def_epa_pp_away": float(away_prior.iloc[0]["def_epa_allowed_pp"]),
+                        "def_epa_pp_home": float(home_prior.iloc[0]["def_epa_allowed_pp"]),
+                        "turnover_rate_away": float(away_prior.iloc[0]["turnover_rate"]),
+                        "turnover_rate_home": float(home_prior.iloc[0]["turnover_rate"]),
+                    }
+                ]
+            )
     else:
         df = df.tail(args.tail).copy()
 
