@@ -1,0 +1,8 @@
+pandas>=2.2.0,<3.0.0
+pyarrow>=23.0.0
+scikit-learn>=1.8.0
+joblib>=1.4.0
+streamlit>=1.36.0
+nflreadpy>=0.1.5
+seaborn>=0.13.2
+numpy>=1.26.0

@@ -50,6 +50,30 @@ If you want to reproduce the full pipeline from scratch without notebooks:
 4. Predict single games (scheduled or imaginary):
    - `python scripts/predict_single_game.py --repo-root . --home NE --away BAL`
 
+## UI (Streamlit)
+
+Run a local interactive UI that supports `game_id` and imaginary matchups:
+
+```bash
+streamlit run app.py
+```
+
+## Docker
+
+Build:
+
+```bash
+docker build -t nfl-elo-ui .
+```
+
+Run (mount `data/` so models and parquet files are available):
+
+```bash
+docker run --rm -p 8501:8501 -v "$(pwd)/data:/app/data" nfl-elo-ui
+```
+
+Note: Docker uses `requirements.txt` for dependencies (not `uv.lock`).
+
 ### `analysis/eda_feature_diagnostics.ipynb`
 
 Turns schedule-level features into a modeling table and exports it to:
