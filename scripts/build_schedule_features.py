@@ -97,11 +97,16 @@ def main() -> None:
     turnover_rate = df_lts_2015_to["turnover_rate_2015"].to_dict()
 
     # -------------------------
-    # 2016-2025 schedules/stats
+    # Schedules can include seasons whose statistics are not published yet.
     # -------------------------
-    seasons = list(range(2016, 2026))
+    seasons = list(range(2016, 2027))
     df_ls = nfl.load_schedules(seasons=seasons).to_pandas()
-    df_lts = nfl.load_team_stats(seasons=seasons).to_pandas()
+    stats_seasons = sorted(
+        df_ls.loc[
+            df_ls["home_score"].notna() & df_ls["away_score"].notna(), "season"
+        ].astype(int).unique().tolist()
+    )
+    df_lts = nfl.load_team_stats(seasons=stats_seasons).to_pandas()
 
     cols_support = [
         "season",
