@@ -13,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from nfl_elo_model.paths import get_paths
+from nfl_elo_model.export_image import weekly_predictions_png
 from nfl_elo_model.predict import (
     TEAM_NAMES, build_features, load_models, load_priors, load_schedule,
     load_stadium, make_synthetic_row, predict_row,
@@ -156,7 +157,9 @@ def main() -> None:
     table = pd.DataFrame(records)
     st.dataframe(table, hide_index=True, width="stretch")
     st.caption("Home spread: a negative line favors the home team; a positive line favors the away team.")
-    st.download_button("Download weekly picks · CSV", table.to_csv(index=False).encode("utf-8-sig"), file_name=f"predictions_{season}_week_{week:02d}.csv", mime="text/csv")
+    csv_col, png_col = st.columns(2)
+    csv_col.download_button("Download weekly picks · CSV", table.to_csv(index=False).encode("utf-8-sig"), file_name=f"predictions_{season}_week_{week:02d}.csv", mime="text/csv")
+    png_col.download_button("Download weekly picks · PNG", weekly_predictions_png(table, season, week), file_name=f"predictions_{season}_week_{week:02d}.png", mime="image/png")
 
     st.divider()
     st.subheader("Game breakdown")

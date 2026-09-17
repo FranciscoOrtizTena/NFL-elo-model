@@ -10,6 +10,7 @@ dependencies = [
     "nflreadpy>=0.1.5",
     "notebook>=7.5.2",
     "pandas>=2.2.0,<3.0.0",
+    "pillow>=12.0.0",
     "pyarrow>=23.0.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",

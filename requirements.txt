@@ -6,3 +6,4 @@ streamlit>=1.36.0
 nflreadpy>=0.1.5
 seaborn>=0.13.2
 numpy>=1.26.0
+pillow>=12.0.0

@@ -73,7 +73,8 @@ All 32 team logos are bundled in `assets/teams/`; selecting a game does not
 download them. The table remains text-only. The layout includes mobile styling.
 
 Select **Download weekly picks · CSV** to save the displayed predictions as
-`predictions_<season>_week_<week>.csv`. Exports are downloaded on demand; the app
+`predictions_<season>_week_<week>.csv`, or **Download weekly picks · PNG** to save
+the same table as `predictions_<season>_week_<week>.png`. Exports are downloaded on demand; the app
 does not maintain an automatic prediction archive.
 
 ### Custom matchup
