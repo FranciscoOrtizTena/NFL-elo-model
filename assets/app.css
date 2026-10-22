@@ -7,6 +7,26 @@
 .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .hero-tags span { font-size: 10px; letter-spacing: .09em; color: #d1e0ec; border: 1px solid #3b5261; padding: 6px 10px; border-radius: 20px; }
 [data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+.weekly-table-wrap { overflow-x: auto; border: 1px solid #304356; border-radius: 16px; margin: 18px 0 12px; background: #101b2c; color: #f4f7fb; }
+.weekly-table-wrap:focus-visible { outline: 2px solid #75e0b8; outline-offset: 3px; }
+.weekly-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.5; }
+.weekly-table th { background: #1c2c3e; color: #afc2d4; text-align: left; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; padding: 16px 14px; white-space: nowrap; }
+.weekly-table td { padding: 15px 14px; border-top: 1px solid #2a3b4d; vertical-align: middle; }
+.weekly-table tbody tr:nth-child(even) { background: #152234; }
+.weekly-table tbody tr:hover { background: #203348; }
+.weekly-table td:first-child { font-weight: 600; }
+.game-status { display: inline-block; border-radius: 20px; padding: 4px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.game-status.final { background: #75e0b81a; color: #96ecd5; border: 1px solid #75e0b844; }
+.game-status.pending { background: #91baff14; color: #b8cfee; border: 1px solid #91baff33; }
+.result-cell { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pending-result { color: #71869b; }
+.pick-cell { color: #d1e0ec; }
+.pick-cell.correct { color: #75e0b8; }
+.pick-cell.incorrect { color: #ff9393; }
+.numeric-cell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.win-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.win-track { display: block; width: 80px; height: 4px; border-radius: 4px; background: #31465b; margin-top: 6px; overflow: hidden; }
+.win-track > span { display: block; height: 100%; background: #75e0b8; border-radius: inherit; }
 [data-testid="stMetric"] { border: 1px solid #8093a544; border-radius: 12px; padding: 16px; }
 [data-testid="stMetricValue"] { font-variant-numeric: tabular-nums; }
 .matchup-panel { background: radial-gradient(ellipse at 0% 0%, var(--away-color), transparent 62%), radial-gradient(ellipse at 100% 0%, var(--home-color), transparent 62%), #101b2c; border: 1px solid #3b4c62; border-radius: 20px; padding: 24px 30px; color: #fff; margin: 12px 0 20px; }

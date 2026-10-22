@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import base64
 import json
+import math
 from html import escape
 from pathlib import Path
 
@@ -46,6 +47,53 @@ def team_identity(team: str) -> tuple[str, str]:
     return f'<img class="team-logo" src="data:image/png;base64,{encoded}" alt="{name} logo">', color
 
 
+def pick_outcome(row: pd.Series, winner: str) -> str:
+    """Grade the predicted winner only when a complete, non-tied result exists."""
+    if pd.isna(row.get("home_score")) or pd.isna(row.get("away_score")):
+        return "pending"
+    if row["home_score"] == row["away_score"]:
+        return "tie"
+    actual = row["home_team"] if row["home_score"] > row["away_score"] else row["away_team"]
+    return "correct" if winner == actual else "incorrect"
+
+
+def rounded_score(score: float) -> int:
+    """Round projected points to the nearest integer, with halves rounded up."""
+    lower = math.floor(score)
+    return lower if score - lower < 0.5 else math.ceil(score)
+
+
+def weekly_table_html(table: pd.DataFrame, outcomes: list[str] | None = None) -> str:
+    """Render an accessible weekly scoreboard with escaped schedule values."""
+    headers = "".join(f'<th scope="col">{escape(column)}</th>' for column in table.columns)
+    rows = []
+    for position, (_, record) in enumerate(table.iterrows()):
+        cells = []
+        for column, value in record.items():
+            content = escape(f"{value:.2f}" if column == "Projected total" else str(value))
+            css = ""
+            if column == "Status":
+                state = "final" if value == "Final" else "pending"
+                content = f'<span class="game-status {state}">{content}</span>'
+            elif column in ("Result", "Projected score"):
+                css = ' class="result-cell"'
+                if value == "—":
+                    content = '<span class="pending-result" aria-label="Result pending">—</span>'
+            elif column == "Win probability":
+                probability = float(str(value).rstrip("%"))
+                content = f'<span class="win-value">{content}</span><span class="win-track" aria-hidden="true"><span style="width:{probability:.1f}%"></span></span>'
+            elif column in ("Home spread", "Projected total"):
+                css = ' class="numeric-cell"'
+            elif column == "Projected winner":
+                outcome = outcomes[position] if outcomes is not None else "pending"
+                labels = {"correct": "Correct pick", "incorrect": "Incorrect pick", "pending": "Result pending", "tie": "Game tied"}
+                css = f' class="pick-cell {outcome}"'
+                content = f'<span title="{labels[outcome]}">{content}</span>'
+            cells.append(f"<td{css}>{content}</td>")
+        rows.append(f'<tr>{"".join(cells)}</tr>')
+    return f'<div class="weekly-table-wrap" role="region" aria-label="Weekly matchups and results" tabindex="0"><table class="weekly-table"><thead><tr>{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
+
+
 def show_prediction(row: pd.Series, preds: dict[str, float]) -> None:
     home, away = row["home_team"], row["away_team"]
     p_home = preds["p_home_win"]
@@ -58,9 +106,9 @@ def show_prediction(row: pd.Series, preds: dict[str, float]) -> None:
 <div class="matchup-panel" style="--away-color:{away_color};--home-color:{home_color}">
   <div class="panel-label">MATCHUP SPOTLIGHT <span>PROJECTED SCORE</span></div>
   <div class="scoreboard">
-    <div class="team-block">{away_logo}<div class="venue-label">AWAY</div><div class="team-name">{away_name}</div><div class="projected-score">{(total - margin) / 2:.1f}</div></div>
+    <div class="team-block">{away_logo}<div class="venue-label">AWAY</div><div class="team-name">{away_name}</div><div class="projected-score">{rounded_score((total - margin) / 2)}</div></div>
     <div class="versus">AT</div>
-    <div class="team-block">{home_logo}<div class="venue-label">HOME</div><div class="team-name">{home_name}</div><div class="projected-score">{(total + margin) / 2:.1f}</div></div>
+    <div class="team-block">{home_logo}<div class="venue-label">HOME</div><div class="team-name">{home_name}</div><div class="projected-score">{rounded_score((total + margin) / 2)}</div></div>
   </div>
   <div class="probability-labels"><span>{escape(away)} <strong>{1 - p_home:.1%}</strong></span><span class="probability-title">WIN PROBABILITY</span><span>{escape(home)} <strong>{p_home:.1%}</strong></span></div>
   <div class="probability-track" role="img" aria-label="{away_name} win probability {1 - p_home:.1%}; {home_name} win probability {p_home:.1%}"><div style="width:{(1 - p_home) * 100:.3f}%"></div></div>
@@ -129,6 +177,7 @@ def main() -> None:
     features = build_features(games)
     predictions = {}
     records = []
+    outcomes = []
     errors = []
     for _, row in features.iterrows():
         try:
@@ -139,9 +188,18 @@ def main() -> None:
         predictions[row["game_id"]] = pred
         p_home = pred["p_home_win"]
         winner = row["home_team"] if p_home >= 0.5 else row["away_team"]
+        outcomes.append(pick_outcome(row, winner))
         record = {
             "Matchup": matchup(row),
-            "Status": "Result available" if completed.loc[row.name] else "Upcoming",
+            "Status": "Final" if completed.loc[row.name] else "Upcoming",
+            "Result": (
+                f"{row['away_team']} {row['away_score']:.0f} — {row['home_team']} {row['home_score']:.0f}"
+                if completed.loc[row.name] else "—"
+            ),
+            "Projected score": (
+                f"{row['away_team']} {rounded_score((pred['pred_total'] - pred['pred_margin']) / 2)}"
+                f" — {row['home_team']} {rounded_score((pred['pred_total'] + pred['pred_margin']) / 2)}"
+            ),
             "Projected winner": TEAM_NAMES.get(winner, winner),
             "Win probability": f"{max(p_home, 1 - p_home):.1%}",
             "Home spread": f"{row['home_team']} {-pred['pred_margin']:+.2f}",
@@ -155,7 +213,9 @@ def main() -> None:
     if not records:
         return
     table = pd.DataFrame(records)
-    st.dataframe(table, hide_index=True, width="stretch")
+    st.markdown(weekly_table_html(table, outcomes), unsafe_allow_html=True)
+    st.caption("Result: away team score — home team score. A dash means no complete result is saved yet.")
+    st.caption("Projected score: model estimates rounded to whole points (.5 rounds up), away — home. Projected winner: green = correct pick; red = incorrect pick; neutral = pending or tied.")
     st.caption("Home spread: a negative line favors the home team; a positive line favors the away team.")
     csv_col, png_col = st.columns(2)
     csv_col.download_button("Download weekly picks · CSV", table.to_csv(index=False).encode("utf-8-sig"), file_name=f"predictions_{season}_week_{week:02d}.csv", mime="text/csv")
